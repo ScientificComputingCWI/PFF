@@ -17,6 +17,10 @@ switch type
             kernel = exp(-(1/2)*(x-y).*A.*(x-y));
         end
     case 'linear'
+
+    otherwise
+
+        error(['chosen kernel ''' type ''' is unknown']);
 end
 
 end

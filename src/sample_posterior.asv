@@ -32,21 +32,20 @@ save_fig = 0;
 
 %% PFF settings
 % number of particles
-N_PFF      = 1000;
+N_PFF      = 100;
 % kernel
 PFF_type   = 'exp';
-PFF_kernel = pi; % this corresponds to Evensen (2022), chapter 18, where 2/pi is used for C. in our case, we set A=2/C
+PFF_kernel = pi/2;
 % time integration span for PFF
 T_start    = 0;
-T_end      = 100;
-integration_type = 'FE'; % 'FE' or 'ode23'
+T_end      = 50;
+integration_type = 'ode23'; % 'FE' or 'ode23'
 Nt         = 1000; % number of steps for PFF in case of FE
 tol_PFF    = 1e-3; % stopping criterion for time integration in case of Matlab's ode solver
-fac        = 1; % additional factor to scale grad_log_p term
 
 %% generate samples
 
-% uniform samples (at which the prior will be evaluated)
+% uniform prior samples
 x_prior_left  = mu_x-3*sqrt(C_xx);
 x_prior_right = mu_x+3*sqrt(C_xx);
 x_prior_uni  = linspace(x_prior_left,x_prior_right,N_samples)';
@@ -54,14 +53,12 @@ x_prior_uni  = linspace(x_prior_left,x_prior_right,N_samples)';
 % q_prior_uni  = q_prior_uni(randperm(N_samples));
 % q_prior_uni  = mu_q + sqrt(C_qq)*randn(N_samples,1);
 
-% samples of the actual prior on x
+% prior on x
 x_prior = mu_x + sqrt(C_xx)*randn(N_samples,1);
 
-% samples of the model error on q
-% option 1: take N_samples for the model error; this seems to be what's
-% happening in https://github.com/geirev/EnKF_scalar/blob/master/src/m_enstein.F90
+% model error on q
 % q_prior = mu_q + sqrt(C_qq)*randn(N_samples,1);
-% option 2: take a single sample model error:
+% take a single model error
 q_prior = mu_q + sqrt(C_qq)*randn;
 
 % observation samples
@@ -151,11 +148,10 @@ post_uni_norm = post_uni/evidence;
 % note that A here is C^-1 in the book of van Leeuwen
 p.PFF.A    = PFF_kernel; % 10./p.ll.B; % see Hu & van Leeuwen, eqn. (18), and eqn (18.4) in Evensen (2022)
 p.PFF.type = PFF_type;
-p.PFF.fac  = fac;
 % prior only on x
 x_prior_PFF = mu_x + sqrt(C_xx)*randn(N_PFF,1);
 % model error on q
-q_prior_PFF = q_prior; %mu_q + sqrt(C_qq)*randn(N_PFF,1);
+q_prior_PFF = mu_q + sqrt(C_qq)*randn(N_PFF,1);
 
 p.ll.xb     = mu_x; %mean(x_prior_PFF,1);
 
@@ -262,7 +258,7 @@ plot(x_vals, pdf_vals, 'LineWidth', 2); % KDE plot of PFF
 
 % xlim([-2 3]);
 xlim([mu_x-3*sqrt(C_xx),mu_x+3*sqrt(C_xx)]);
-legend('prior','posterior by sampling prior and kde','posterior by sampling uniform', 'posterior PFF','Location','northwest'); %,'posterior resampled')
+legend('prior','posterior by sampling prior','posterior by sampling uniform', 'posterior PFF','Location','northwest'); %,'posterior resampled')
 grid on
 box on
 set(gca,'FontSize',14)

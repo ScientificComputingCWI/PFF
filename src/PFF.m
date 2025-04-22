@@ -24,6 +24,8 @@ res = zeros(Np,1);
 
 
 A  = p.PFF.A;
+fac = p.PFF.fac;
+
 % R  = p.ll.R;
 B  = p.ll.B;
 xb = p.ll.xb;
@@ -35,7 +37,7 @@ grad_log_p = zeros(Np,1);
 for i=1:Np
 
     % evaluate model and get its Jacobian
-    [y,J] = model(x(i),q(i),p);
+    [y,J] = model(x(i),q,p);
     
     % evaluate gradient of log likelihood
     [~,dlogp_dx] = likelihood(y,d,p);
@@ -51,7 +53,8 @@ end
 for i=1:Np
 
     kernel  = RKHS(x(:,:),x(i,:),p.PFF);
-    res(i)  = sum(kernel .* ( -(A.'*(x(:,:) - x(i,:)))+ grad_log_p ));
+    % testing a factor of 2 by incorporating d/dtau of the posterior
+    res(i)  = sum(kernel .* ( -(A.'*(x(:,:) - x(i,:))) + fac*grad_log_p ));
 
 end
 
@@ -69,7 +72,7 @@ end
 %     end
 % end
 
-% scale with number of particles and scale
+% divide by number of particles and scale
 % residual = B*res/Np;
 residual = res/Np;
     
