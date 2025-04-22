@@ -32,7 +32,7 @@ save_fig = 0;
 
 %% PFF settings
 % number of particles
-N_PFF      = 1000;
+N_PFF      = 200;
 % kernel
 PFF_type   = 'exp';
 PFF_kernel = pi; % this corresponds to Evensen (2022), chapter 18, where 2/pi is used for C. in our case, we set A=2/C
@@ -189,24 +189,38 @@ switch integration_type
         if (t_out(end)<T_end)
             disp(['residual tolerance satisfied at t=' num2str(t_out(end))]);
         end
+        DKL   = zeros(Nt+1,1);
+        for k=2:length(t_out)
+            DKL(k) = kl_divergence(x_out(k-1,:),x_out(k,:));
+        end
+
     case 'FE' % Forward Euler
-        dt = T_end/Nt;
+        dt    = T_end/Nt;
         x_out = zeros(Nt+1,N_PFF);
-        x = x_prior_PFF;
+        x     = x_prior_PFF;
         x_out(1,:) = x;
+        DKL_inst   = zeros(Nt+1,1);
+
         t  = 0;
         for k=2:Nt+1
             rhs = PFF(t,x,param);
             % rhs = PFF(x,obs,q_prior_PFF,p);
             x_new = x + dt*rhs; % forward Euler update
             t     = t + dt;
+            DKL_inst(k)   = kl_divergence(x,x_new);
             x     = x_new;
             x_out(k,:) = x_new;
         end
         t_out = 0:dt:T_end;
 
+
 end
 x_final = x_out(end,:);
+
+DKL_post   = zeros(Nt+1,1);
+for k=1:Nt
+    DKL_post(k) = kl_divergence(x_out(k,:),x_final);
+end
 
 % get KDE of the particles
 [pdf_vals, x_vals] = ksdensity(x_final);
@@ -273,6 +287,17 @@ if (save_fig)
 end
 
 
+%% plot KL
+figure
+hold on
+plot(t_out(2:end),DKL_inst(2:end),'LineWidth',2);
+plot(t_out(2:end),DKL_post(1:end-1),'LineWidth',2);
 
+grid on
+box on
+set(gca,'FontSize',14)
+xlabel('pseudo time')
+ylabel('KL divergence')
+legend('DKL(x^n,x^{n+1}','DKL(x^n,x^N)')
 
 
